@@ -1,89 +1,79 @@
-name: 🤖 Build Android APK
+name: Build Android APK
 
-  on:
-    push:
-      branches: [ main ]
-    pull_request:
-      branches: [ main ]
-    workflow_dispatch:
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
-  jobs:
-    build-apk:
-      name: Build APK
-      runs-on: ubuntu-latest
+jobs:
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
 
-      steps:
-        - name: 📥 Checkout code
-          uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        - name: ⚙️ Setup Node.js 20
-          uses: actions/setup-node@v4
-          with:
-            node-version: '20'
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-        - name: 📦 Install dependencies
-          run: npm install --legacy-peer-deps
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
 
-        - name: 🏗️ Build web app
-          env:
-            VITE_API_URL: ${{ secrets.VITE_API_URL }}
-          run: npm run build
+      - name: Build web app
+        run: npm run build
 
-        - name: ☕ Setup Java 21
-          uses: actions/setup-java@v4
-          with:
-            distribution: 'temurin'
-            java-version: '21'
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
 
-        - name: 📱 Setup Android SDK
-          uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-        - name: ➕ Add Android platform
-          run: |
-            if [ ! -d "android" ]; then
-              npx cap add android
-            fi
+      - name: Add Android platform
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
 
-        - name: 🎨 Generate app icons
-          run: |
-            sudo apt-get install -y imagemagick 2>/dev/null
-            ICON="public/icon/logo.png"
-            if [ ! -f "$ICON" ]; then
-              mkdir -p public/icon
-              convert -size 512x512 xc:#3b82f6 -fill white -font DejaVu-Sans-Bold \
-                -pointsize 200 -gravity center -annotate 0 'M' "$ICON" 2>/dev/null || \
-              convert -size 512x512 xc:#3b82f6 "$ICON"
-            fi
-            for DPI_SIZE in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
-              DPI=${DPI_SIZE%%:*}
-              SIZE=${DPI_SIZE##*:}
-              DIR="android/app/src/main/res/mipmap-$DPI"
-              mkdir -p "$DIR"
-              convert "$ICON" -resize ${SIZE}x${SIZE}! "$DIR/ic_launcher.png" 2>/dev/null || cp "$ICON" "$DIR/ic_launcher.png"
-              cp "$DIR/ic_launcher.png" "$DIR/ic_launcher_round.png"
-            done
-            echo "✅ Icons ready"
+      - name: Generate icons
+        run: |
+          sudo apt-get install -y imagemagick 2>/dev/null || true
+          ICON="public/icon/logo.png"
+          mkdir -p public/icon
+          if [ ! -f "$ICON" ]; then
+            convert -size 512x512 xc:#3b82f6 "$ICON" 2>/dev/null || echo "icon missing"
+          fi
+          for DPI_SIZE in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
+            DPI=${DPI_SIZE%%:*}
+            SIZE=${DPI_SIZE##*:}
+            DIR="android/app/src/main/res/mipmap-$DPI"
+            mkdir -p "$DIR"
+            convert "$ICON" -resize ${SIZE}x${SIZE}! "$DIR/ic_launcher.png" 2>/dev/null || cp "$ICON" "$DIR/ic_launcher.png"
+            cp "$DIR/ic_launcher.png" "$DIR/ic_launcher_round.png"
+          done
+          echo "Icons ready"
 
-        - name: 🔄 Sync Capacitor
-          run: npx cap sync android
+      - name: Sync Capacitor
+        run: npx cap sync android
 
-        - name: 🔧 Gradle setup
-          working-directory: android
-          run: chmod +x gradlew
+      - name: Gradle setup
+        working-directory: android
+        run: chmod +x gradlew
 
-        - name: 🏗️ Build Debug APK
-          working-directory: android
-          run: ./gradlew assembleDebug --no-daemon
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
 
-        - name: 📤 Upload APK
-          uses: actions/upload-artifact@v4
-          with:
-            name: memegram-debug-apk
-            path: android/app/build/outputs/apk/debug/app-debug.apk
-            retention-days: 30
-
-        - name: 📋 Build info
-          run: |
-            APK="android/app/build/outputs/apk/debug/app-debug.apk"
-            [ -f "$APK" ] && echo "✅ APK: $(du -sh "$APK" | cut -f1)" || echo "❌ APK not found"
-  
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: memegram-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
