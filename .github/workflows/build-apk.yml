@@ -20,10 +20,9 @@ name: 🤖 Build Android APK
           uses: actions/setup-node@v4
           with:
             node-version: '20'
-            cache: 'npm'
 
         - name: 📦 Install dependencies
-          run: npm ci
+          run: npm install --legacy-peer-deps
 
         - name: 🏗️ Build web app
           env:
@@ -47,56 +46,44 @@ name: 🤖 Build Android APK
 
         - name: 🎨 Generate app icons
           run: |
-            sudo apt-get install -y imagemagick
-            ICON=public/icon/logo.png
+            sudo apt-get install -y imagemagick 2>/dev/null
+            ICON="public/icon/logo.png"
             if [ ! -f "$ICON" ]; then
-              echo "Creating default icon..."
+              mkdir -p public/icon
               convert -size 512x512 xc:#3b82f6 -fill white -font DejaVu-Sans-Bold \
-                -pointsize 200 -gravity center -annotate 0 'M' \
-                "$ICON"
+                -pointsize 200 -gravity center -annotate 0 'M' "$ICON" 2>/dev/null || \
+              convert -size 512x512 xc:#3b82f6 "$ICON"
             fi
-            declare -A SIZES=(
-              ["mdpi"]=48 ["hdpi"]=72 ["xhdpi"]=96
-              ["xxhdpi"]=144 ["xxxhdpi"]=192
-            )
-            for DPI in "${!SIZES[@]}"; do
-              SIZE=${SIZES[$DPI]}
-              DIR=android/app/src/main/res/mipmap-$DPI
-              mkdir -p $DIR
-              convert "$ICON" -resize ${SIZE}x${SIZE}! $DIR/ic_launcher.png
-              # Round icon with circular mask
-              convert "$ICON" -resize ${SIZE}x${SIZE}! \
-                \( +clone -threshold -1 -fill black -colorize 100 \
-                   -fill white -draw "circle $((SIZE/2)),$((SIZE/2)) $((SIZE/2)),0" \) \
-                -alpha off -compose CopyOpacity -composite $DIR/ic_launcher_round.png
+            for DPI_SIZE in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
+              DPI=${DPI_SIZE%%:*}
+              SIZE=${DPI_SIZE##*:}
+              DIR="android/app/src/main/res/mipmap-$DPI"
+              mkdir -p "$DIR"
+              convert "$ICON" -resize ${SIZE}x${SIZE}! "$DIR/ic_launcher.png" 2>/dev/null || cp "$ICON" "$DIR/ic_launcher.png"
+              cp "$DIR/ic_launcher.png" "$DIR/ic_launcher_round.png"
             done
-            # Foreground icon for adaptive icons
-            convert "$ICON" -resize 108x108 android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_foreground.png 2>/dev/null || true
-            echo "✅ Icons generated!"
+            echo "✅ Icons ready"
 
         - name: 🔄 Sync Capacitor
           run: npx cap sync android
 
-        - name: 🔧 Make Gradle executable
-          run: chmod +x android/gradlew
+        - name: 🔧 Gradle setup
+          working-directory: android
+          run: chmod +x gradlew
 
         - name: 🏗️ Build Debug APK
           working-directory: android
-          run: ./gradlew assembleDebug --no-daemon --stacktrace
+          run: ./gradlew assembleDebug --no-daemon
 
-        - name: 📤 Upload APK artifact
+        - name: 📤 Upload APK
           uses: actions/upload-artifact@v4
           with:
             name: memegram-debug-apk
             path: android/app/build/outputs/apk/debug/app-debug.apk
             retention-days: 30
 
-        - name: 📋 APK Info
+        - name: 📋 Build info
           run: |
-            APK=android/app/build/outputs/apk/debug/app-debug.apk
-            if [ -f "$APK" ]; then
-              SIZE=$(du -sh "$APK" | cut -f1)
-              echo "✅ APK built successfully!"
-              echo "📦 Size: $SIZE"
-            fi
+            APK="android/app/build/outputs/apk/debug/app-debug.apk"
+            [ -f "$APK" ] && echo "✅ APK: $(du -sh "$APK" | cut -f1)" || echo "❌ APK not found"
   
