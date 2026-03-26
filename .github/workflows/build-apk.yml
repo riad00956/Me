@@ -25,6 +25,8 @@ jobs:
         run: npm install
 
       - name: Build web app
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: npm run build
 
       - name: Setup Java
@@ -41,6 +43,26 @@ jobs:
           if [ ! -d "android" ]; then
             npx cap add android
           fi
+
+      - name: Generate app icons from logo
+        run: |
+          mkdir -p resources
+          # Copy the logo to resources for @capacitor/assets
+          cp public/icon/logo.png resources/icon.png
+          # Use ImageMagick to create properly sized icons directly
+          # Android icon sizes
+          convert resources/icon.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png || true
+          convert resources/icon.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png || true
+          convert resources/icon.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png || true
+          convert resources/icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png || true
+          convert resources/icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
+          # Round icons
+          convert resources/icon.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png || true
+          convert resources/icon.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png || true
+          convert resources/icon.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png || true
+          convert resources/icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png || true
+          convert resources/icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png || true
+          echo "Icons generated!"
 
       - name: Sync Capacitor
         run: npx cap sync android
