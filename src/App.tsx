@@ -15,6 +15,8 @@ import SettingsView from './components/Settings';
 import AboutView from './components/AboutView';
 import ConfirmModal from './context/ConfirmModal';
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
 export default function App() {
   const [isSplashFinished, setIsSplashFinished] = useState(false);
   const [bots, setBots] = useState<BotInfo[]>(() => JSON.parse(localStorage.getItem('bots') || '[]'));
@@ -62,7 +64,7 @@ export default function App() {
   const fetchUpdates = useCallback(async () => {
     if (!activeBotToken) return;
     try {
-      const res = await fetch(`/api/bot/updates?token=${encodeURIComponent(activeBotToken)}`);
+      const res = await fetch(`${API_BASE}/api/bot/updates?token=${encodeURIComponent(activeBotToken)}`);
       if (!res.ok) throw new Error('Network error');
       const data = await res.json();
       
@@ -99,7 +101,7 @@ export default function App() {
   useEffect(() => {
     if (activeBotToken) {
       // Init bot on server
-      fetch('/api/bot/init', {
+      fetch(`${API_BASE}/api/bot/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: activeBotToken }),
@@ -122,7 +124,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch('/api/bot/init', {
+      const res = await fetch(`${API_BASE}/api/bot/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
@@ -168,7 +170,7 @@ export default function App() {
   const handleSendMessage = async (text: string) => {
     if (!selectedChat || !activeBotToken) return;
     try {
-      const res = await fetch('/api/bot/send', {
+      const res = await fetch(`${API_BASE}/api/bot/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: activeBotToken, chatId: selectedChat.id, text }),
@@ -192,7 +194,7 @@ export default function App() {
     if (caption) formData.append('caption', caption);
 
     try {
-      const response = await fetch('/api/bot/sendMedia', {
+      const response = await fetch(`${API_BASE}/api/bot/sendMedia`, {
         method: 'POST',
         body: formData,
       });
@@ -210,7 +212,7 @@ export default function App() {
   const handleBlockChat = async (chatId: number, blocked: boolean) => {
     if (!activeBotToken) return;
     try {
-      const response = await fetch('/api/bot/block', {
+      const response = await fetch(`${API_BASE}/api/bot/block`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: activeBotToken, chatId, blocked }),
