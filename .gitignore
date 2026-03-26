@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.cache/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Android (keep android/ directory but exclude build files)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/captures/
+
+# iOS
+ios/.xcode.env.local
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+
+# Capacitor
+.capacitor/
+
+# Replit specific
+.replit
+replit.nix
+.upm/
+.replit-artifact/
