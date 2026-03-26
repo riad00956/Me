@@ -1,0 +1,98 @@
+name: 🚀 Release APK
+
+  on:
+    push:
+      tags:
+        - 'v*'
+    workflow_dispatch:
+      inputs:
+        version:
+          description: 'Version (e.g. 1.0.0)'
+          required: true
+          default: '1.0.0'
+
+  jobs:
+    release:
+      name: Build & Release APK
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: 📥 Checkout
+          uses: actions/checkout@v4
+
+        - name: ⚙️ Setup Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '20'
+            cache: 'npm'
+
+        - name: 📦 Install dependencies
+          run: npm ci
+
+        - name: 🏗️ Build web app
+          env:
+            VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          run: npm run build
+
+        - name: ☕ Setup Java
+          uses: actions/setup-java@v4
+          with:
+            distribution: 'temurin'
+            java-version: '21'
+
+        - name: 📱 Setup Android SDK
+          uses: android-actions/setup-android@v3
+
+        - name: ➕ Add Android platform
+          run: |
+            if [ ! -d "android" ]; then
+              npx cap add android
+            fi
+
+        - name: 🎨 Generate icons
+          run: |
+            sudo apt-get install -y imagemagick
+            ICON=public/icon/logo.png
+            declare -A SIZES=(["mdpi"]=48 ["hdpi"]=72 ["xhdpi"]=96 ["xxhdpi"]=144 ["xxxhdpi"]=192)
+            for DPI in "${!SIZES[@]}"; do
+              SIZE=${SIZES[$DPI]}
+              DIR=android/app/src/main/res/mipmap-$DPI
+              mkdir -p $DIR
+              convert "$ICON" -resize ${SIZE}x${SIZE}! $DIR/ic_launcher.png
+              convert "$ICON" -resize ${SIZE}x${SIZE}! $DIR/ic_launcher_round.png
+            done
+
+        - name: 🔄 Sync & Build
+          run: |
+            npx cap sync android
+            chmod +x android/gradlew
+            cd android && ./gradlew assembleRelease --no-daemon
+
+        - name: 📦 Get version
+          id: version
+          run: |
+            VERSION=${{ github.event.inputs.version || github.ref_name }}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+        - name: 🏷️ Create Release
+          uses: softprops/action-gh-release@v2
+          with:
+            tag_name: ${{ steps.version.outputs.version }}
+            name: "Memegram ${{ steps.version.outputs.version }}"
+            body: |
+              ## 🤖 Memegram ${{ steps.version.outputs.version }}
+
+              ### What's new
+              - ✅ Back navigation fixed
+              - ✅ Header fits perfectly on mobile
+              - ✅ Premium UI with reactions & forward
+              - ✅ Dark mode support
+
+              ### Download
+              Download the APK below and install on your Android device.
+            files: android/app/build/outputs/apk/release/app-release-unsigned.apk
+            draft: false
+            prerelease: false
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
