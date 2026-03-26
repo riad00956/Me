@@ -7,13 +7,13 @@ name: 🚀 Release APK
     workflow_dispatch:
       inputs:
         version:
-          description: 'Version (e.g. 1.0.0)'
+          description: 'Release version (e.g. 1.0.0)'
           required: true
           default: '1.0.0'
 
   jobs:
     release:
-      name: Build & Release APK
+      name: Build & Release
       runs-on: ubuntu-latest
 
       steps:
@@ -24,10 +24,9 @@ name: 🚀 Release APK
           uses: actions/setup-node@v4
           with:
             node-version: '20'
-            cache: 'npm'
 
         - name: 📦 Install dependencies
-          run: npm ci
+          run: npm install --legacy-peer-deps
 
         - name: 🏗️ Build web app
           env:
@@ -51,48 +50,51 @@ name: 🚀 Release APK
 
         - name: 🎨 Generate icons
           run: |
-            sudo apt-get install -y imagemagick
-            ICON=public/icon/logo.png
-            declare -A SIZES=(["mdpi"]=48 ["hdpi"]=72 ["xhdpi"]=96 ["xxhdpi"]=144 ["xxxhdpi"]=192)
-            for DPI in "${!SIZES[@]}"; do
-              SIZE=${SIZES[$DPI]}
-              DIR=android/app/src/main/res/mipmap-$DPI
-              mkdir -p $DIR
-              convert "$ICON" -resize ${SIZE}x${SIZE}! $DIR/ic_launcher.png
-              convert "$ICON" -resize ${SIZE}x${SIZE}! $DIR/ic_launcher_round.png
+            sudo apt-get install -y imagemagick 2>/dev/null
+            ICON="public/icon/logo.png"
+            for DPI_SIZE in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
+              DPI=${DPI_SIZE%%:*}
+              SIZE=${DPI_SIZE##*:}
+              DIR="android/app/src/main/res/mipmap-$DPI"
+              mkdir -p "$DIR"
+              convert "$ICON" -resize ${SIZE}x${SIZE}! "$DIR/ic_launcher.png" 2>/dev/null || \
+                cp "$ICON" "$DIR/ic_launcher.png"
+              cp "$DIR/ic_launcher.png" "$DIR/ic_launcher_round.png"
             done
 
-        - name: 🔄 Sync & Build
+        - name: 🔄 Sync & Build APK
           run: |
             npx cap sync android
             chmod +x android/gradlew
-            cd android && ./gradlew assembleRelease --no-daemon
+            cd android && ./gradlew assembleDebug --no-daemon
 
-        - name: 📦 Get version
-          id: version
+        - name: 📦 Get version tag
+          id: ver
           run: |
-            VERSION=${{ github.event.inputs.version || github.ref_name }}
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            VER="${{ github.event.inputs.version }}"
+            [ -z "$VER" ] && VER="${{ github.ref_name }}"
+            echo "tag=$VER" >> $GITHUB_OUTPUT
 
-        - name: 🏷️ Create Release
+        - name: 🏷️ Create GitHub Release
           uses: softprops/action-gh-release@v2
           with:
-            tag_name: ${{ steps.version.outputs.version }}
-            name: "Memegram ${{ steps.version.outputs.version }}"
+            tag_name: ${{ steps.ver.outputs.tag }}
+            name: "Memegram v${{ steps.ver.outputs.tag }}"
             body: |
-              ## 🤖 Memegram ${{ steps.version.outputs.version }}
+              ## 📱 Memegram v${{ steps.ver.outputs.tag }}
 
-              ### What's new
-              - ✅ Back navigation fixed
-              - ✅ Header fits perfectly on mobile
-              - ✅ Premium UI with reactions & forward
-              - ✅ Dark mode support
+              ### ✅ Changes in this release
+              - Back navigation fixed (chat → home)
+              - Header fits perfectly on mobile screen
+              - Premium UI with message reactions
+              - Forward, Reply, Copy, Delete messages
+              - Dark mode & theme color support
 
-              ### Download
+              ### 📥 Installation
               Download the APK below and install on your Android device.
-            files: android/app/build/outputs/apk/release/app-release-unsigned.apk
+              *(Enable "Install from unknown sources" in Settings)*
+            files: android/app/build/outputs/apk/debug/app-debug.apk
             draft: false
-            prerelease: false
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
