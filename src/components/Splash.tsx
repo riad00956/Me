@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'motion/react';
 
 interface SplashProps {
@@ -7,79 +7,59 @@ interface SplashProps {
 
 export default function Splash({ onFinish }: SplashProps) {
   useEffect(() => {
-    const timer = setTimeout(onFinish, 3000);
+    const timer = setTimeout(onFinish, 2500);
     return () => clearTimeout(timer);
   }, [onFinish]);
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-white dark:bg-[#1c1c1c] z-50 transition-colors overflow-hidden">
-      {/* Animated Background Elements */}
-      <motion.div 
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-white dark:bg-[#1c1c1c] z-50 overflow-hidden">
+      <motion.div
         initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1.5, opacity: 0.05 }}
-        transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
-        className="absolute w-[500px] h-[500px] bg-blue-500 rounded-full blur-[100px]"
+        animate={{ scale: 1.5, opacity: 0.06 }}
+        transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
+        className="absolute w-[400px] h-[400px] bg-blue-500 rounded-full blur-[100px]"
       />
-      
       <div className="relative z-10 flex flex-col items-center">
         <motion.div
           initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
-          transition={{ 
-            type: "spring",
-            stiffness: 260,
-            damping: 20,
-            duration: 0.8 
-          }}
-          className="w-32 h-32 mb-8 relative"
+          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+          className="w-20 h-20 mb-6 bg-blue-500 rounded-[28px] flex items-center justify-center shadow-2xl shadow-blue-500/40"
         >
-          <div className="absolute inset-0 bg-blue-500 rounded-[32px] blur-2xl opacity-20 animate-pulse" />
-          <img 
-            src="/icon/logo.png" 
-            alt="Memegram Logo" 
-            className="w-full h-full object-contain relative z-10 drop-shadow-2xl"
-            referrerPolicy="no-referrer"
-          />
+          <span className="text-4xl font-black text-white">M</span>
         </motion.div>
-
         <motion.div
-          initial={{ y: 20, opacity: 0 }}
+          initial={{ y: 16, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
           className="text-center"
         >
-          <h1 className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter mb-2">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter mb-1">
             Memegram
           </h1>
           <div className="flex items-center justify-center gap-2">
-            <div className="h-[2px] w-8 bg-blue-500 rounded-full" />
-            <p className="text-xs font-bold text-blue-500 uppercase tracking-[0.3em]">
+            <div className="h-[2px] w-6 bg-blue-500 rounded-full" />
+            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.25em]">
               Premium Bot Client
             </p>
-            <div className="h-[2px] w-8 bg-blue-500 rounded-full" />
+            <div className="h-[2px] w-6 bg-blue-500 rounded-full" />
           </div>
         </motion.div>
       </div>
-
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1, duration: 1 }}
-        className="absolute bottom-12 flex flex-col items-center gap-3"
+        transition={{ delay: 0.8, duration: 0.8 }}
+        className="absolute bottom-10 flex items-center gap-1"
       >
-        <div className="flex gap-1">
-          {[0, 1, 2].map((i) => (
-            <motion.div
-              key={i}
-              animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
-              transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-              className="w-1.5 h-1.5 bg-blue-500 rounded-full"
-            />
-          ))}
-        </div>
-        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest">
-          powered by ꪑꫀꪑꫀ ꪜꪖ꠸ꪗꪖ
-        </p>
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            animate={{ scale: [1, 1.4, 1], opacity: [0.3, 1, 0.3] }}
+            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.18 }}
+            className="w-1.5 h-1.5 bg-blue-500 rounded-full"
+          />
+        ))}
       </motion.div>
     </div>
   );
