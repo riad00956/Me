@@ -1,100 +1,79 @@
-name: 🚀 Release APK
+name: Release APK
 
-  on:
-    push:
-      tags:
-        - 'v*'
-    workflow_dispatch:
-      inputs:
-        version:
-          description: 'Release version (e.g. 1.0.0)'
-          required: true
-          default: '1.0.0'
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (e.g. 1.0.0)
+        required: true
+        default: 1.0.0
 
-  jobs:
-    release:
-      name: Build & Release
-      runs-on: ubuntu-latest
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
 
-      steps:
-        - name: 📥 Checkout
-          uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        - name: ⚙️ Setup Node.js
-          uses: actions/setup-node@v4
-          with:
-            node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-        - name: 📦 Install dependencies
-          run: npm install --legacy-peer-deps
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
 
-        - name: 🏗️ Build web app
-          env:
-            VITE_API_URL: ${{ secrets.VITE_API_URL }}
-          run: npm run build
+      - name: Build web app
+        run: npm run build
 
-        - name: ☕ Setup Java
-          uses: actions/setup-java@v4
-          with:
-            distribution: 'temurin'
-            java-version: '21'
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
 
-        - name: 📱 Setup Android SDK
-          uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-        - name: ➕ Add Android platform
-          run: |
-            if [ ! -d "android" ]; then
-              npx cap add android
-            fi
+      - name: Add Android platform
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
 
-        - name: 🎨 Generate icons
-          run: |
-            sudo apt-get install -y imagemagick 2>/dev/null
-            ICON="public/icon/logo.png"
-            for DPI_SIZE in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
-              DPI=${DPI_SIZE%%:*}
-              SIZE=${DPI_SIZE##*:}
-              DIR="android/app/src/main/res/mipmap-$DPI"
-              mkdir -p "$DIR"
-              convert "$ICON" -resize ${SIZE}x${SIZE}! "$DIR/ic_launcher.png" 2>/dev/null || \
-                cp "$ICON" "$DIR/ic_launcher.png"
-              cp "$DIR/ic_launcher.png" "$DIR/ic_launcher_round.png"
-            done
+      - name: Generate icons
+        run: |
+          sudo apt-get install -y imagemagick 2>/dev/null || true
+          ICON="public/icon/logo.png"
+          for DPI_SIZE in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
+            DPI=${DPI_SIZE%%:*}; SIZE=${DPI_SIZE##*:}
+            DIR="android/app/src/main/res/mipmap-$DPI"; mkdir -p "$DIR"
+            convert "$ICON" -resize ${SIZE}x${SIZE}! "$DIR/ic_launcher.png" 2>/dev/null || cp "$ICON" "$DIR/ic_launcher.png"
+            cp "$DIR/ic_launcher.png" "$DIR/ic_launcher_round.png"
+          done
 
-        - name: 🔄 Sync & Build APK
-          run: |
-            npx cap sync android
-            chmod +x android/gradlew
-            cd android && ./gradlew assembleDebug --no-daemon
+      - name: Sync and Build APK
+        run: |
+          npx cap sync android
+          chmod +x android/gradlew
+          cd android && ./gradlew assembleDebug --no-daemon
 
-        - name: 📦 Get version tag
-          id: ver
-          run: |
-            VER="${{ github.event.inputs.version }}"
-            [ -z "$VER" ] && VER="${{ github.ref_name }}"
-            echo "tag=$VER" >> $GITHUB_OUTPUT
-
-        - name: 🏷️ Create GitHub Release
-          uses: softprops/action-gh-release@v2
-          with:
-            tag_name: ${{ steps.ver.outputs.tag }}
-            name: "Memegram v${{ steps.ver.outputs.tag }}"
-            body: |
-              ## 📱 Memegram v${{ steps.ver.outputs.tag }}
-
-              ### ✅ Changes in this release
-              - Back navigation fixed (chat → home)
-              - Header fits perfectly on mobile screen
-              - Premium UI with message reactions
-              - Forward, Reply, Copy, Delete messages
-              - Dark mode & theme color support
-
-              ### 📥 Installation
-              Download the APK below and install on your Android device.
-              *(Enable "Install from unknown sources" in Settings)*
-            files: android/app/build/outputs/apk/debug/app-debug.apk
-            draft: false
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: Memegram ${{ github.event.inputs.version || github.ref_name }}
+          body: |
+            ## Memegram Release
+            - Back navigation fixed
+            - Mobile header fixed
+            - Message reactions and forwarding
+            - Dark mode support
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
